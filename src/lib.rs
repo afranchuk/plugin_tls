@@ -98,6 +98,12 @@ mod host {
             guard.get(id).unwrap().as_ref() as *const ()
         })
     }
+
+    pub fn reset() {
+        PLUGIN_TLS.with(|m| {
+            m.write().clear();
+        })
+    }
 }
 
 type TlsFunction = unsafe extern "C" fn(&RStr<'static>, extern "C" fn() -> RBox<()>) -> *const ();
@@ -107,14 +113,6 @@ type TlsFunction = unsafe extern "C" fn(&RStr<'static>, extern "C" fn() -> RBox<
 pub struct Context(TlsFunction);
 
 impl Context {
-    /// Get the context.
-    ///
-    /// Separate instances of `Context` will always be identical.
-    #[cfg(feature = "host")]
-    pub fn get() -> Self {
-        Context(host::tls)
-    }
-
     /// Initialize the thread local storage.
     ///
     /// # Safety
@@ -122,6 +120,24 @@ impl Context {
     /// this library being accessed within the binary. Otherwise UB may occur.
     pub unsafe fn initialize_tls(self) {
         HOST_TLS = Some(self.0);
+    }
+}
+
+#[cfg(feature = "host")]
+impl Context {
+    /// Get the context.
+    ///
+    /// Separate instances of `Context` will always be identical.
+    pub fn get() -> Self {
+        Context(host::tls)
+    }
+
+    /// Reset the thread-local storage for the current thread.
+    ///
+    /// This destructs all values and returns the state to a point as if no values have yet been
+    /// accessed on the current thread.
+    pub fn reset() {
+        host::reset();
     }
 }
 

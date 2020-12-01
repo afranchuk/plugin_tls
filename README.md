@@ -26,3 +26,10 @@ with the `abi_stable::StableAbi` trait for library flexibility, but use of
 
 Note that both `host` and `plugin` may be enabled together, specifically for use
 in workspaces that may contain both the host and plugin(s).
+
+## Safety
+If unloading plugins, one must ensure that any memory set by plugins in
+thread-local storage is removed (including any initial values!). In the future
+there could be additions to track which initial values are created by a
+particular plugin, but for now one solution is to call `Context::reset` to clear
+the thread-local values for the current thread.

@@ -1,5 +1,9 @@
 # plugin_tls ChangeLog
 
+## 0.2.1  -- 2020-12-01
+* Add `Context::reset()` function to reset thread-local variables for the
+  current thread.
+
 ## 0.2.0  -- 2020-12-01
 * Change `Context::new()` to `Context::get()`.
 * Fix soundness bug in `initialize`.
