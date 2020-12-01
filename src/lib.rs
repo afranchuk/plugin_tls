@@ -3,9 +3,6 @@
 pub use abi_stable as macro_support;
 use abi_stable::std_types::{RBox, RStr};
 
-#[cfg(any(feature = "host", feature = "plugin"))]
-use abi_stable::pointer_trait::TransmuteElement;
-
 #[cfg(all(feature = "host", feature = "plugin"))]
 compile_error!("only one of the 'host' or 'plugin' features may be enabled");
 
@@ -74,29 +71,31 @@ mod host {
     pub unsafe extern "C" fn tls(
         id: &RStr<'static>,
         init: extern "C" fn() -> RBox<()>,
-        f: unsafe extern "C" fn(RBox<()>, *const ()) -> RBox<()>,
-        data: RBox<()>,
-    ) -> RBox<()> {
+    ) -> *const () {
         PLUGIN_TLS.with(|m| {
             let guard = m.upgradable_read();
             let guard = if !guard.contains_key(id) {
                 let mut guard = parking_lot::RwLockUpgradableReadGuard::upgrade(guard);
-                guard.insert(id.clone(), init());
+                // Check again in case it was added while we waited for an upgrade
+                if !guard.contains_key(id) {
+                    guard.insert(id.clone(), init());
+                }
                 parking_lot::RwLockWriteGuard::downgrade(guard)
             } else {
                 parking_lot::RwLockUpgradableReadGuard::downgrade(guard)
             };
-            f(data, guard.get(id).unwrap().as_ref() as *const ())
+            // We leak the reference from PLUGIN_TLS as well as the reference out of the RwLock
+            // guard, however this will be safe because:
+            // 1. the reference will be used shortly within the thread's runtime (not sending to
+            //    another thread) due to the `with` implementation, and
+            // 2. the RwLock guard is protecting access/changes to the map, however we _only_ ever
+            //    add to the map if a key does not exist (so this box won't disappear on us).
+            guard.get(id).unwrap().as_ref() as *const ()
         })
     }
 }
 
-type TlsFunction = unsafe extern "C" fn(
-    &RStr<'static>,
-    extern "C" fn() -> RBox<()>,
-    unsafe extern "C" fn(RBox<()>, *const ()) -> RBox<()>,
-    RBox<()>,
-) -> RBox<()>;
+type TlsFunction = unsafe extern "C" fn(&RStr<'static>, extern "C" fn() -> RBox<()>) -> *const ();
 
 /// The context to be installed in plugins.
 #[repr(transparent)]
@@ -126,14 +125,6 @@ pub unsafe fn initialize(ctx: &'static Context) {
     HOST_TLS = Some(ctx.0);
 }
 
-#[cfg(any(feature = "host", feature = "plugin"))]
-unsafe extern "C" fn call<T, R, F: FnOnce(&T) -> R>(f: RBox<()>, data: *const ()) -> RBox<()> {
-    RBox::new(RBox::into_inner(f.transmute_element::<F>())(
-        (data as *const T).as_ref().unwrap(),
-    ))
-    .transmute_element()
-}
-
 impl<T: 'static> LocalKey<T> {
     #[cfg(any(feature = "host", feature = "plugin"))]
     pub fn with<F, R>(&'static self, f: F) -> R
@@ -142,14 +133,10 @@ impl<T: 'static> LocalKey<T> {
     {
         let host_tls =
             unsafe { HOST_TLS.as_ref() }.expect("host thread local storage improperly initialized");
-        RBox::into_inner(unsafe {
-            host_tls(
-                &self.id,
-                self.init,
-                call::<T, R, F>,
-                RBox::new(f).transmute_element(),
-            )
-            .transmute_element()
+        f(unsafe {
+            (host_tls(&self.id, self.init) as *const T)
+                .as_ref()
+                .unwrap()
         })
     }
 }
