@@ -2,6 +2,9 @@
 
 ## 0.2.0  -- 2020-12-01
 * Change `Context::new()` to `Context::get()`.
+* Fix soundness bug in `initialize`.
+* Move `initialize` to be a method of `Context` and rename as `initialize_tls`
+  to clarify intent.
 
 ## 0.1.1  -- 2020-12-01
 * Allow type inference in initializer of `thread_local!`.

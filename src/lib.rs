@@ -102,24 +102,26 @@ type TlsFunction = unsafe extern "C" fn(&RStr<'static>, extern "C" fn() -> RBox<
 #[repr(transparent)]
 pub struct Context(TlsFunction);
 
-#[cfg(feature = "host")]
 impl Context {
-    /// Create a new Context.
-    pub fn get() -> &'static Self {
-        unsafe { std::mem::transmute(&host::tls) }
+    /// Get the context.
+    ///
+    /// Separate instances of `Context` will always be identical.
+    #[cfg(feature = "host")]
+    pub fn get() -> Self {
+        Context(host::tls)
+    }
+
+    /// Initialize the thread local storage.
+    ///
+    /// # Safety
+    /// This must be called only once in each binary, and prior to any thread-local values managed by
+    /// this library being accessed within the binary. Otherwise UB may occur.
+    pub unsafe fn initialize_tls(self) {
+        HOST_TLS = Some(self.0);
     }
 }
 
 static mut HOST_TLS: Option<TlsFunction> = None;
-
-/// Initialize the thread local storage.
-///
-/// # Safety
-/// This must be called only once in each binary, and prior to any thread-local values managed by
-/// this library being accessed within the binary. Otherwise UB may occur.
-pub unsafe fn initialize(ctx: &'static Context) {
-    HOST_TLS = Some(ctx.0);
-}
 
 impl<T: 'static> LocalKey<T> {
     #[cfg(any(feature = "host", feature = "plugin"))]
