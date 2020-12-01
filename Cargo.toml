@@ -3,8 +3,11 @@ name = "plugin_tls"
 version = "0.2.0"
 authors = ["Alex Franchuk <alex.franchuk@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Thread-local storage across dynamic library boundaries."
+readme = "README.md"
+repository = "https://github.com/afranchuk/plugin_tls"
+license = "MIT"
+keywords = ["thread-local-storage","plugin","plugins"]
 
 [dependencies]
 abi_stable = "0.9"
