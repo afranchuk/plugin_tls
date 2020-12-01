@@ -13,7 +13,7 @@ Use the `host` feature to enable the host capabilities (in exactly one binary to
 be loaded in memory), and use the `plugin` feature to enable plugin capabilities
 (in zero or more binaries to be loaded).
 
-In each binary (both host and plugins), call `Context::initialize` with the
+In each binary (both host and plugins), call `Context::initialize_tls` with the
 host context prior to any thread-local storage being accessed (typically as part
 of the binary startup routine).
 
