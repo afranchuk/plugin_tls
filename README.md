@@ -13,9 +13,9 @@ Use the `host` feature to enable the host capabilities (in exactly one binary to
 be loaded in memory), and use the `plugin` feature to enable plugin capabilities
 (in zero or more binaries to be loaded).
 
-In each plugin binary, call `plugin_tls::initialize` with the host context prior
-to any thread-local storage being accessed (typically as part of the plugin
-loading routine).
+In each binary (both host and plugins), call `plugin_tls::initialize` with the
+host context prior to any thread-local storage being accessed (typically as part
+of the binary startup routine).
 
 Besides that, the `thread_local!` macro works exactly like `std::thread_local!`
 for both the host and plugins. Note that thead-local values are indexed by the
@@ -23,3 +23,6 @@ given name, type, and module path, so these _must not_ conflict. Also note that
 stored values _must_ be abi-stable. Abi-stability is not enforced in `LocalKey`
 with the `abi_stable::StableAbi` trait for library flexibility, but use of
 `abi_stable` is highly encouraged.
+
+Note that both `host` and `plugin` may be enabled together, specifically for use
+in workspaces that may contain both the host and plugin(s).

@@ -3,15 +3,13 @@
 pub use abi_stable as macro_support;
 use abi_stable::std_types::{RBox, RStr};
 
-#[cfg(all(feature = "host", feature = "plugin"))]
-compile_error!("only one of the 'host' or 'plugin' features may be enabled");
-
 pub struct LocalKey<T: 'static> {
     #[doc(hidden)]
     pub id: RStr<'static>,
     #[doc(hidden)]
     pub init: extern "C" fn() -> RBox<()>,
-    __phantom: std::marker::PhantomData<extern "C" fn() -> T>,
+    #[doc(hidden)]
+    pub __phantom: std::marker::PhantomData<extern "C" fn() -> T>,
 }
 
 impl<T: 'static> LocalKey<T> {
@@ -50,12 +48,13 @@ macro_rules! __thread_local_inner {
                 unsafe { RBox::new(__val).transmute_element() }
             }
 
-            $crate::LocalKey::new(
+            $crate::LocalKey {
                 // Order key id by the likely most specific to least specific identifiers for
                 // faster map comparison.
-                RStr::from_str(std::concat!(std::stringify!($name), std::stringify!($t), std::module_path!())),
-                __init
-            )
+                id: RStr::from_str(std::concat!(std::stringify!($name), std::stringify!($t), std::module_path!())),
+                init: __init,
+                __phantom: std::marker::PhantomData
+            }
         };
     }
 }
@@ -67,7 +66,6 @@ mod host {
     use std::collections::BTreeMap as Map;
 
     std::thread_local! {
-        #[cfg(feature = "host")]
         static PLUGIN_TLS: RwLock<Map<RStr<'static>, RBox<()>>> = parking_lot::const_rwlock(Default::default());
     }
 
@@ -112,18 +110,13 @@ impl Context {
     }
 }
 
-#[cfg(feature = "host")]
-static mut HOST_TLS: Option<TlsFunction> = Some(host::tls);
-
-#[cfg(feature = "plugin")]
 static mut HOST_TLS: Option<TlsFunction> = None;
 
-/// Install the context into the plugin.
+/// Initialize the thread local storage.
 ///
 /// # Safety
-/// This must be called only once, and prior to any thread-local values being accessed within the
-/// plugin. Otherwise UB may occur.
-#[cfg(feature = "plugin")]
+/// This must be called only once in each binary, and prior to any thread-local values managed by
+/// this library being accessed within the binary. Otherwise UB may occur.
 pub unsafe fn initialize(ctx: &'static Context) {
     HOST_TLS = Some(ctx.0);
 }
