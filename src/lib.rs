@@ -142,4 +142,12 @@ impl<T: 'static> LocalKey<T> {
                 .unwrap()
         })
     }
+
+    #[cfg(not(any(feature = "host", feature = "plugin")))]
+    pub fn with<F, R>(&'static self, _f: F) -> R
+    where
+        F: FnOnce(&T) -> R,
+    {
+        panic!("plugin_tls built without 'host' or 'plugin' enabled")
+    }
 }
