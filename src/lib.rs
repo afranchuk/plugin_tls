@@ -45,7 +45,10 @@ macro_rules! __thread_local_inner {
         $vis static $name: $crate::LocalKey<$t> = {
             use $crate::macro_support::{pointer_trait::TransmuteElement, std_types::{RBox, RStr}};
 
-            extern "C" fn __init() -> RBox<()> { unsafe { RBox::new($init).transmute_element() } }
+            extern "C" fn __init() -> RBox<()> {
+                let __val: $t = $init;
+                unsafe { RBox::new(__val).transmute_element() }
+            }
 
             $crate::LocalKey::new(
                 // Order key id by the likely most specific to least specific identifiers for
