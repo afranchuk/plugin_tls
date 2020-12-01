@@ -105,7 +105,7 @@ pub struct Context(TlsFunction);
 #[cfg(feature = "host")]
 impl Context {
     /// Create a new Context.
-    pub fn new() -> &'static Self {
+    pub fn get() -> &'static Self {
         unsafe { std::mem::transmute(&host::tls) }
     }
 }
