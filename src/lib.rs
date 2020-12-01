@@ -3,6 +3,7 @@
 pub use abi_stable as macro_support;
 use abi_stable::std_types::{RBox, RStr};
 
+/// A key into thread-local storage.
 pub struct LocalKey<T: 'static> {
     #[doc(hidden)]
     pub id: RStr<'static>,
@@ -23,6 +24,9 @@ impl<T: 'static> LocalKey<T> {
     }
 }
 
+/// Create one or more thread-local values.
+///
+/// This macro has identical syntax to `std::thread_local!`.
 #[macro_export]
 macro_rules! thread_local {
     () => {};
@@ -124,6 +128,9 @@ impl Context {
 static mut HOST_TLS: Option<TlsFunction> = None;
 
 impl<T: 'static> LocalKey<T> {
+    /// Acquires a reference to the value in this TLS key.
+    ///
+    /// If neither `host` nor `plugin` features are enabled, this will panic.
     #[cfg(any(feature = "host", feature = "plugin"))]
     pub fn with<F, R>(&'static self, f: F) -> R
     where
@@ -138,6 +145,9 @@ impl<T: 'static> LocalKey<T> {
         })
     }
 
+    /// Acquires a reference to the value in this TLS key.
+    ///
+    /// If neither `host` nor `plugin` features are enabled, this will panic.
     #[cfg(not(any(feature = "host", feature = "plugin")))]
     pub fn with<F, R>(&'static self, _f: F) -> R
     where

@@ -17,3 +17,6 @@ parking_lot = { version = "0.11", optional = true }
 default = []
 host = ["parking_lot"]
 plugin = []
+
+[package.metadata.docs.rs]
+all-features = true
