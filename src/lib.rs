@@ -116,8 +116,8 @@ impl Context {
     /// Initialize the thread local storage.
     ///
     /// # Safety
-    /// This must be called only once in each binary, and prior to any thread-local values managed by
-    /// this library being accessed within the binary. Otherwise UB may occur.
+    /// This must be called only once in each plugin, and prior to any thread-local values managed by
+    /// this library being accessed within the plugin. Otherwise UB may occur.
     pub unsafe fn initialize_tls(self) {
         HOST_TLS = Some(self.0);
     }
@@ -141,6 +141,10 @@ impl Context {
     }
 }
 
+#[cfg(feature = "host")]
+static mut HOST_TLS: Option<TlsFunction> = Some(host::tls);
+
+#[cfg(not(feature = "host"))]
 static mut HOST_TLS: Option<TlsFunction> = None;
 
 impl<T: 'static> LocalKey<T> {

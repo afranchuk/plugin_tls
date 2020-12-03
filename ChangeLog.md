@@ -1,5 +1,8 @@
 # plugin_tls ChangeLog
 
+## 0.2.2  -- 2020-12-03
+* Automatically set the initial tls function for hosts.
+
 ## 0.2.1  -- 2020-12-01
 * Add `Context::reset()` function to reset thread-local variables for the
   current thread.

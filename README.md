@@ -13,9 +13,10 @@ Use the `host` feature to enable the host capabilities (in exactly one binary to
 be loaded in memory), and use the `plugin` feature to enable plugin capabilities
 (in zero or more binaries to be loaded).
 
-In each binary (both host and plugins), call `Context::initialize_tls` with the
-host context prior to any thread-local storage being accessed (typically as part
-of the binary startup routine).
+In each plugin binary, call `Context::initialize_tls` with the host context
+prior to any thread-local storage being accessed (typically as part of the
+binary startup routine). The host binary will default to the correct state,
+however this may be overwritten with `initialize_tls` as well.
 
 Besides that, the `thread_local!` macro works exactly like `std::thread_local!`
 for both the host and plugins. Note that thead-local values are indexed by the
