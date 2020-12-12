@@ -66,11 +66,11 @@ macro_rules! __thread_local_inner {
 #[cfg(feature = "host")]
 mod host {
     use abi_stable::std_types::{RBox, RStr};
-    use parking_lot::RwLock;
+    use std::cell::RefCell;
     use std::collections::BTreeMap as Map;
 
     std::thread_local! {
-        static PLUGIN_TLS: RwLock<Map<RStr<'static>, RBox<()>>> = parking_lot::const_rwlock(Default::default());
+        static PLUGIN_TLS: RefCell<Map<RStr<'static>, RBox<()>>> = RefCell::new(Default::default());
     }
 
     pub unsafe extern "C" fn tls(
@@ -78,31 +78,22 @@ mod host {
         init: extern "C" fn() -> RBox<()>,
     ) -> *const () {
         PLUGIN_TLS.with(|m| {
-            let guard = m.upgradable_read();
-            let guard = if !guard.contains_key(id) {
-                let mut guard = parking_lot::RwLockUpgradableReadGuard::upgrade(guard);
-                // Check again in case it was added while we waited for an upgrade
-                if !guard.contains_key(id) {
-                    guard.insert(id.clone(), init());
-                }
-                parking_lot::RwLockWriteGuard::downgrade(guard)
-            } else {
-                parking_lot::RwLockUpgradableReadGuard::downgrade(guard)
+            let mut m = m.borrow_mut();
+            if !m.contains_key(id) {
+                m.insert(id.clone(), init());
             };
-            // We leak the reference from PLUGIN_TLS as well as the reference out of the RwLock
-            // guard, however this will be safe because:
+            // We leak the reference from PLUGIN_TLS as well as the reference out of the RefCell,
+            // however this will be safe because:
             // 1. the reference will be used shortly within the thread's runtime (not sending to
             //    another thread) due to the `with` implementation, and
-            // 2. the RwLock guard is protecting access/changes to the map, however we _only_ ever
+            // 2. the RefCell guard is protecting access/changes to the map, however we _only_ ever
             //    add to the map if a key does not exist (so this box won't disappear on us).
-            guard.get(id).unwrap().as_ref() as *const ()
+            m.get(id).unwrap().as_ref() as *const ()
         })
     }
 
     pub fn reset() {
-        PLUGIN_TLS.with(|m| {
-            m.write().clear();
-        })
+        PLUGIN_TLS.with(|m| m.borrow_mut().clear())
     }
 }
 

@@ -1,5 +1,8 @@
 # plugin_tls ChangeLog
 
+## 0.2.3  -- 2020-12-11
+* Use RefCell instead of RwLock (unnecessary).
+
 ## 0.2.2  -- 2020-12-03
 * Automatically set the initial tls function for hosts.
 
