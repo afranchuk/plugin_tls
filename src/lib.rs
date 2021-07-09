@@ -6,22 +6,7 @@ use abi_stable::std_types::{RBox, RStr};
 /// A key into thread-local storage.
 pub struct LocalKey<T: 'static> {
     #[doc(hidden)]
-    pub id: RStr<'static>,
-    #[doc(hidden)]
-    pub init: extern "C" fn() -> RBox<()>,
-    #[doc(hidden)]
-    pub __phantom: std::marker::PhantomData<extern "C" fn() -> T>,
-}
-
-impl<T: 'static> LocalKey<T> {
-    #[doc(hidden)]
-    pub fn new(id: RStr<'static>, init: extern "C" fn() -> RBox<()>) -> Self {
-        LocalKey {
-            id,
-            init,
-            __phantom: std::marker::PhantomData,
-        }
-    }
+    pub read: unsafe extern "C" fn() -> *const T,
 }
 
 /// Create one or more thread-local values.
@@ -47,18 +32,23 @@ macro_rules! __thread_local_inner {
         $vis static $name: $crate::LocalKey<$t> = {
             use $crate::macro_support::{pointer_trait::TransmuteElement, std_types::{RBox, RStr}};
 
-            extern "C" fn __init() -> RBox<()> {
-                let __val: $t = $init;
-                unsafe { RBox::new(__val).transmute_element() }
+            extern "C" fn __thread_local_init() -> RBox<()> {
+                let __thread_local_val: $t = $init;
+                unsafe { RBox::new(__thread_local_val).transmute_element() }
             }
 
-            $crate::LocalKey {
-                // Order key id by the likely most specific to least specific identifiers for
-                // faster map comparison.
-                id: RStr::from_str(std::concat!(std::stringify!($name), std::stringify!($t), std::module_path!())),
-                init: __init,
-                __phantom: std::marker::PhantomData
+            std::thread_local! {
+                static VALUE: &'static $t = $crate::__get::<$t>(
+                    &RStr::from_str(std::concat!(std::stringify!($name), std::stringify!($t), std::module_path!())),
+                    __thread_local_init,
+                );
             }
+
+            unsafe extern "C" fn __thread_local_read() -> *const $t {
+                VALUE.with(|v| *v as *const $t)
+            }
+
+            $crate::LocalKey { read: __thread_local_read }
         };
     }
 }
@@ -138,6 +128,13 @@ static mut HOST_TLS: Option<TlsFunction> = Some(host::tls);
 #[cfg(not(feature = "host"))]
 static mut HOST_TLS: Option<TlsFunction> = None;
 
+#[doc(hidden)]
+pub fn __get<T>(id: &RStr<'static>, init: extern "C" fn() -> RBox<()>) -> &'static T {
+    let host_tls =
+        unsafe { HOST_TLS.as_ref() }.expect("host thread local storage improperly initialized");
+    unsafe { (host_tls(id, init) as *const T).as_ref().unwrap() }
+}
+
 impl<T: 'static> LocalKey<T> {
     /// Acquires a reference to the value in this TLS key.
     ///
@@ -147,13 +144,7 @@ impl<T: 'static> LocalKey<T> {
     where
         F: FnOnce(&T) -> R,
     {
-        let host_tls =
-            unsafe { HOST_TLS.as_ref() }.expect("host thread local storage improperly initialized");
-        f(unsafe {
-            (host_tls(&self.id, self.init) as *const T)
-                .as_ref()
-                .unwrap()
-        })
+        f(unsafe { (self.read)().as_ref().unwrap() })
     }
 
     /// Acquires a reference to the value in this TLS key.

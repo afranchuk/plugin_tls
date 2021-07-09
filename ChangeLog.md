@@ -1,5 +1,8 @@
 # plugin_tls ChangeLog
 
+## 0.3.0  -- 2021-07-09
+* Improve performance by using `std::thread_local!` to store the reference.
+
 ## 0.2.3  -- 2020-12-11
 * Use RefCell instead of RwLock (unnecessary).
 

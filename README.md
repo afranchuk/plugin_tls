@@ -19,11 +19,11 @@ binary startup routine). The host binary will default to the correct state,
 however this may be overwritten with `initialize_tls` as well.
 
 Besides that, the `thread_local!` macro works exactly like `std::thread_local!`
-for both the host and plugins. Note that thead-local values are indexed by the
+for both the host and plugins. Note that thread-local values are indexed by the
 given name, type, and module path, so these _must not_ conflict. Also note that
 stored values _must_ be abi-stable. Abi-stability is not enforced in `LocalKey`
-with the `abi_stable::StableAbi` trait for library flexibility, but use of
-`abi_stable` is highly encouraged.
+(e.g. with the `abi_stable::StableAbi` trait) for library flexibility, but use
+of `abi_stable` is highly encouraged.
 
 Note that both `host` and `plugin` may be enabled together, specifically for use
 in workspaces that may contain both the host and plugin(s).
