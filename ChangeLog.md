@@ -1,5 +1,8 @@
 # plugin_tls ChangeLog
 
+## 0.4.0  -- 2022-07-01
+* Add `lazy_static` support as it's a fairly similar implementation.
+
 ## 0.3.0  -- 2021-07-09
 * Improve performance by using `std::thread_local!` to store the reference.
 
