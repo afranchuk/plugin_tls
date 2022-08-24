@@ -1,5 +1,8 @@
 # plugin_tls ChangeLog
 
+## 0.4.1  -- 2022-08-24
+* Relax `abi_stable` version bounds.
+
 ## 0.4.0  -- 2022-07-01
 * Add `lazy_static` support as it's a fairly similar implementation.
 
